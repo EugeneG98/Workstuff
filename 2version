@@ -64,19 +64,19 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
                 type_value = df.iat[row_number, column_index]  # Получаем значение из E5, E6 или E7
                 type_values.append(type_value)
 
-            # Проверяем, есть ли значения для "Тип обращения"
+            # Если все значения для "Тип обращения" пустые, ставим "пусто"
             if all(pd.isna(value) for value in type_values):
-                type_value_to_add = "отсутствует"
+                type_value_to_add = "пусто"
             else:
                 type_value_to_add = None  # По умолчанию None, если есть значения
 
             # Если ни одно значение не найдено, добавляем "отсутствует" в оба столбца
-            if type_value_to_add == "отсутствует" and postanovshik_value == "отсутствует":
-                data.append(["отсутствует", "отсутствует", file_index])
+            if type_value_to_add == "пусто" and postanovshik_value == "отсутствует":
+                data.append([type_value_to_add, postanovshik_value, file_index])
                 error_files.append([file_index, filename, "Отсутствует информация в ячейках"])
             else:
                 # Добавляем данные в список
-                if type_value_to_add == "отсутствует":
+                if type_value_to_add == "пусто":
                     data.append([type_value_to_add, postanovshik_value, file_index])
                 else:
                     for type_value in type_values:
@@ -92,12 +92,9 @@ df_result = pd.DataFrame(data, columns=['Тип обращения', 'Поста
 # Создаем DataFrame для таблицы с ошибками, если есть ошибки
 df_errors = pd.DataFrame(error_files, columns=['Номер файла', 'Имя файла', 'Описание ошибки'])
 
-# Формируем Excel файл с двумя листами
-output_file = r'C:\Users\e.gorin\Desktop\output.xlsx'  # Замените на ваш путь для сохранения файла
-with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
-    if not df_result.empty:
-        df_result.to_excel(writer, sheet_name='Сводная таблица', index=False)
-    if not df_errors.empty:
-        df_errors.to_excel(writer, sheet_name='Файлы с ошибками', index=False)
+# Выводим результат в консоль
+print("Сводная таблица:")
+print(df_result)
 
-print(f"Файл сохранен по пути: {output_file}")
+print("\nФайлы с ошибками:")
+print(df_errors)
