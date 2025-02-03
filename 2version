@@ -87,22 +87,17 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
             # Если возникла ошибка, добавляем файл в список с ошибками
             error_files.append([file_index, filename, f"Ошибка при обработке файла: {e}"])
 
-# Создаем DataFrame, если есть данные
-if data:
-    df_result = pd.DataFrame(data, columns=['Тип обращения', 'Постановщик', 'Номер файла'])
-    
-    # Выводим результат в консоль
-    print("Сводная таблица:")
-    print(df_result)
-else:
-    print("Нет извлеченных значений.")
+# Создаем DataFrame для сводной таблицы, если есть данные
+df_result = pd.DataFrame(data, columns=['Тип обращения', 'Постановщик', 'Номер файла'])
+# Создаем DataFrame для таблицы с ошибками, если есть ошибки
+df_errors = pd.DataFrame(error_files, columns=['Номер файла', 'Имя файла', 'Описание ошибки'])
 
-# Создаем отдельную таблицу для файлов с ошибками
-if error_files:
-    df_errors = pd.DataFrame(error_files, columns=['Номер файла', 'Имя файла', 'Описание ошибки'])
-    
-    print("\nФайлы с ошибками:")
-    print(df_errors)
-else:
-    print("\nНет файлов с ошибками.")
+# Формируем Excel файл с двумя листами
+output_file = r'C:\Users\e.gorin\Desktop\output.xlsx'  # Замените на ваш путь для сохранения файла
+with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
+    if not df_result.empty:
+        df_result.to_excel(writer, sheet_name='Сводная таблица', index=False)
+    if not df_errors.empty:
+        df_errors.to_excel(writer, sheet_name='Файлы с ошибками', index=False)
 
+print(f"Файл сохранен по пути: {output_file}")
