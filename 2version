@@ -1,0 +1,104 @@
+import pandas as pd
+import os
+import warnings
+
+# Скрываем предупреждения
+warnings.filterwarnings("ignore", category=UserWarning)
+
+# Путь к папке с вашими Excel файлами
+folder_path = r'C:\Users\e.gorin\Desktop\Test\Tests\Январь'  # Замените на ваш путь
+# Ячейки, которые вы хотите извлечь
+type_cells = ['E5', 'E6', 'E7']  # Ячейки для "Тип обращения"
+postanovshik_cell = 'D31'  # Ячейка для "Постановщик"
+alternative_cell = 'E31'  # Ячейка для альтернативного значения
+# Список для хранения значений
+data = []
+# Список для хранения ошибок (номер файла, имя файла и описание ошибки)
+error_files = []
+
+# Проходим по всем файлам в указанной папке
+for file_index, filename in enumerate(os.listdir(folder_path), start=1):
+    if filename.endswith('.xlsx') and not filename.startswith('~$'):  # Игнорируем временные файлы
+        file_path = os.path.join(folder_path, filename)
+        try:
+            # Читаем файл
+            df = pd.read_excel(file_path, header=None)
+
+            # Извлекаем значение для "Постановщик"
+            column_letter = postanovshik_cell[0]
+            row_number = int(postanovshik_cell[1:]) - 1  # Преобразуем строку в индекс (0-индексация)
+            column_index = ord(column_letter.upper()) - ord('A')
+            postanovshik_value = df.iat[row_number, column_index]  # Получаем значение из D31
+
+            # Приводим значение к строке и удаляем лишние пробелы
+            if pd.notna(postanovshik_value):
+                postanovshik_value = str(postanovshik_value).strip()
+            else:
+                postanovshik_value = None
+
+            # Если значение в D31 пустое, берем значение из E31
+            if not postanovshik_value:
+                alternative_column_letter = alternative_cell[0]
+                alternative_row_number = int(alternative_cell[1:]) - 1
+                alternative_column_index = ord(alternative_column_letter.upper()) - ord('A')
+                postanovshik_value = df.iat[alternative_row_number, alternative_column_index]  # Получаем значение из E31
+                # Приводим альтернативное значение к строке
+                if pd.notna(postanovshik_value):
+                    postanovshik_value = str(postanovshik_value).strip()
+                else:
+                    postanovshik_value = "отсутствует"
+
+            # Проверяем значения для "Тип обращения"
+            type_values = []
+            for cell in type_cells:
+                column_letter = cell[0]
+                row_number = int(cell[1:]) - 1  # Преобразуем строку в индекс (0-индексация)
+                column_index = ord(column_letter.upper()) - ord('A')
+                type_value = df.iat[row_number, column_index]  # Получаем значение из E5, E6 или E7
+                type_values.append(type_value)
+
+            # Проверяем, есть ли значения для "Тип обращения"
+            if all(pd.isna(value) for value in type_values):
+                type_value_to_add = "отсутствует"
+            else:
+                type_value_to_add = None  # По умолчанию None, если есть значения
+
+            # Проверяем значение для "Постановщик"
+            if not postanovshik_value or postanovshik_value == "отсутствует":
+                postanovshik_value = "отсутствует"
+
+            # Если ни одно значение не найдено, добавляем "отсутствует" в оба столбца
+            if type_value_to_add == "отсутствует" and postanovshik_value == "отсутствует":
+                data.append(["отсутствует", "отсутствует", file_index])
+                error_files.append([file_index, filename, "Отсутствует информация в ячейках"])
+            else:
+                # Добавляем данные в список
+                if type_value_to_add == "отсутствует":
+                    data.append([type_value_to_add, postanovshik_value, file_index])
+                else:
+                    for type_value in type_values:
+                        if pd.notna(type_value):
+                            data.append([type_value, postanovshik_value, file_index])
+
+        except Exception as e:
+            # Если возникла ошибка, добавляем файл в список с ошибками
+            error_files.append([file_index, filename, f"Ошибка при обработке файла: {e}"])
+
+# Создаем DataFrame, если есть данные
+if data:
+    df_result = pd.DataFrame(data, columns=['Тип обращения', 'Постановщик', 'Номер файла'])
+    
+    # Выводим результат в консоль
+    print("Сводная таблица:")
+    print(df_result)
+else:
+    print("Нет извлеченных значений.")
+
+# Создаем отдельную таблицу для файлов с ошибками
+if error_files:
+    df_errors = pd.DataFrame(error_files, columns=['Номер файла', 'Имя файла', 'Описание ошибки'])
+    
+    print("\nФайлы с ошибками:")
+    print(df_errors)
+else:
+    print("\nНет файлов с ошибками.")
