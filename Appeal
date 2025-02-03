@@ -24,6 +24,9 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
             # Читаем файл
             df = pd.read_excel(file_path, header=None)
             
+            # Выводим размер DataFrame для отладки
+            print(f"Размер таблицы в файле {filename}: {df.shape}")
+            
             # Проверяем, достаточно ли строк и столбцов в файле
             max_row = df.shape[0]  # Количество строк
             max_col = df.shape[1]  # Количество столбцов
@@ -33,6 +36,10 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
                 column_letter = cell[0]
                 row_number = int(cell[1:]) - 1  # Преобразуем строку в индекс (0-индексация)
                 column_index = ord(column_letter.upper()) - ord('A')
+                
+                # Отладочный вывод
+                print(f"Проверка ячейки {cell}: строка {row_number}, столбец {column_index} — Макс. строки: {max_row}, Макс. столбцы: {max_col}")
+                
                 return row_number < max_row and column_index < max_col
 
             # Проверяем, существуют ли все необходимые ячейки
@@ -45,6 +52,9 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
             row_number = int(postanovshik_cell[1:]) - 1  # Преобразуем строку в индекс (0-индексация)
             column_index = ord(column_letter.upper()) - ord('A')
             postanovshik_value = df.iat[row_number, column_index]  # Получаем значение из D31
+
+            # Добавим вывод для отладки
+            print(f"Постановщик из файла {filename} (ячейка {postanovshik_cell}): {postanovshik_value}")
 
             # Приводим значение к строке и удаляем лишние пробелы
             if pd.notna(postanovshik_value):
@@ -71,6 +81,7 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
                 row_number = int(cell[1:]) - 1  # Преобразуем строку в индекс (0-индексация)
                 column_index = ord(column_letter.upper()) - ord('A')
                 type_value = df.iat[row_number, column_index]  # Получаем значение из E5, E6 или E7
+                print(f"Тип обращения из файла {filename} (ячейка {cell}): {type_value}")  # Отладочный вывод
                 type_values.append(type_value)
 
             # Проверяем, есть ли значения для "Тип обращения"
