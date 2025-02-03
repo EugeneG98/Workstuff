@@ -28,25 +28,32 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
             column_letter = postanovshik_cell[0]
             row_number = int(postanovshik_cell[1:]) - 1  # Преобразуем строку в индекс (0-индексация)
             column_index = ord(column_letter.upper()) - ord('A')
-            postanovshik_value = df.iat[row_number, column_index]  # Получаем значение из D31
-
-            # Приводим значение к строке и удаляем лишние пробелы
-            if pd.notna(postanovshik_value):
-                postanovshik_value = str(postanovshik_value).strip()
-            else:
-                postanovshik_value = None
-
-            # Если значение в D31 пустое, берем значение из E31
-            if not postanovshik_value:
-                alternative_column_letter = alternative_cell[0]
-                alternative_row_number = int(alternative_cell[1:]) - 1
-                alternative_column_index = ord(alternative_column_letter.upper()) - ord('A')
-                postanovshik_value = df.iat[alternative_row_number, alternative_column_index]  # Получаем значение из E31
-                # Приводим альтернативное значение к строке
+            
+            # Попробуем извлечь значение из D31
+            try:
+                postanovshik_value = df.iat[row_number, column_index]  # Получаем значение из D31
                 if pd.notna(postanovshik_value):
                     postanovshik_value = str(postanovshik_value).strip()
                 else:
                     postanovshik_value = "отсутствует"
+            except Exception as e:
+                postanovshik_value = "отсутствует"  # Если ошибка, назначаем значение по умолчанию
+
+            # Если значение в D31 пустое, берем значение из E31
+            if not postanovshik_value or postanovshik_value == "отсутствует":
+                alternative_column_letter = alternative_cell[0]
+                alternative_row_number = int(alternative_cell[1:]) - 1
+                alternative_column_index = ord(alternative_column_letter.upper()) - ord('A')
+                
+                # Попробуем извлечь значение из E31
+                try:
+                    postanovshik_value = df.iat[alternative_row_number, alternative_column_index]  # Получаем значение из E31
+                    if pd.notna(postanovshik_value):
+                        postanovshik_value = str(postanovshik_value).strip()
+                    else:
+                        postanovshik_value = "отсутствует"
+                except Exception as e:
+                    postanovshik_value = "отсутствует"  # Если ошибка, назначаем значение по умолчанию
 
             # Проверяем значения для "Тип обращения"
             type_values = []
@@ -62,10 +69,6 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
                 type_value_to_add = "отсутствует"
             else:
                 type_value_to_add = None  # По умолчанию None, если есть значения
-
-            # Проверяем значение для "Постановщик"
-            if not postanovshik_value or postanovshik_value == "отсутствует":
-                postanovshik_value = "отсутствует"
 
             # Если ни одно значение не найдено, добавляем "отсутствует" в оба столбца
             if type_value_to_add == "отсутствует" and postanovshik_value == "отсутствует":
@@ -102,3 +105,4 @@ if error_files:
     print(df_errors)
 else:
     print("\nНет файлов с ошибками.")
+
