@@ -13,8 +13,6 @@ postanovshik_cell = 'D31'  # Ячейка для "Постановщик"
 alternative_cell = 'E31'  # Ячейка для альтернативного значения
 # Список для хранения значений
 data = []
-# Список для хранения ошибок (номер файла, имя файла и описание ошибки)
-error_files = []
 
 # Проходим по всем файлам в указанной папке
 for file_index, filename in enumerate(os.listdir(folder_path), start=1):
@@ -35,12 +33,12 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
                 if pd.notna(postanovshik_value):
                     postanovshik_value = str(postanovshik_value).strip()
                 else:
-                    postanovshik_value = "отсутствует"
+                    postanovshik_value = "пусто"
             except Exception as e:
-                postanovshik_value = "отсутствует"  # Если ошибка, назначаем значение по умолчанию
+                postanovshik_value = "пусто"  # Если ошибка, назначаем значение по умолчанию
 
             # Если значение в D31 пустое, берем значение из E31
-            if not postanovshik_value or postanovshik_value == "отсутствует":
+            if not postanovshik_value or postanovshik_value == "пусто":
                 alternative_column_letter = alternative_cell[0]
                 alternative_row_number = int(alternative_cell[1:]) - 1
                 alternative_column_index = ord(alternative_column_letter.upper()) - ord('A')
@@ -51,9 +49,9 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
                     if pd.notna(postanovshik_value):
                         postanovshik_value = str(postanovshik_value).strip()
                     else:
-                        postanovshik_value = "отсутствует"
+                        postanovshik_value = "пусто"
                 except Exception as e:
-                    postanovshik_value = "отсутствует"  # Если ошибка, назначаем значение по умолчанию
+                    postanovshik_value = "пусто"  # Если ошибка, назначаем значение по умолчанию
 
             # Проверяем значения для "Тип обращения"
             type_values = []
@@ -70,31 +68,16 @@ for file_index, filename in enumerate(os.listdir(folder_path), start=1):
             else:
                 type_value_to_add = None  # По умолчанию None, если есть значения
 
-            # Если ни одно значение не найдено, добавляем "отсутствует" в оба столбца
-            if type_value_to_add == "пусто" and postanovshik_value == "отсутствует":
-                data.append([type_value_to_add, postanovshik_value, file_index])
-                error_files.append([file_index, filename, "Отсутствует информация в ячейках"])
-            else:
-                # Добавляем данные в список
-                if type_value_to_add == "пусто":
-                    data.append([type_value_to_add, postanovshik_value, file_index])
-                else:
-                    for type_value in type_values:
-                        if pd.notna(type_value):
-                            data.append([type_value, postanovshik_value, file_index])
+            # Добавляем данные в список
+            data.append([type_value_to_add, postanovshik_value, file_index])
 
         except Exception as e:
-            # Если возникла ошибка, добавляем файл в список с ошибками
-            error_files.append([file_index, filename, f"Ошибка при обработке файла: {e}"])
+            # Если возникла ошибка, выводим в консоль
+            print(f"Ошибка при обработке файла {filename}: {e}")
 
 # Создаем DataFrame для сводной таблицы, если есть данные
 df_result = pd.DataFrame(data, columns=['Тип обращения', 'Постановщик', 'Номер файла'])
-# Создаем DataFrame для таблицы с ошибками, если есть ошибки
-df_errors = pd.DataFrame(error_files, columns=['Номер файла', 'Имя файла', 'Описание ошибки'])
 
 # Выводим результат в консоль
 print("Сводная таблица:")
 print(df_result)
-
-print("\nФайлы с ошибками:")
-print(df_errors)
