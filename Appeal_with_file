@@ -1,0 +1,83 @@
+import pandas as pd
+import os
+import warnings
+from datetime import datetime
+
+# Скрываем предупреждения
+warnings.filterwarnings("ignore", category=UserWarning)
+
+# Путь к папке с файлами
+folder_path = r'/Users/Gorin/Downloads/Январь'  # Укажи свой путь
+
+# Текущая дата для названия итогового файла
+current_date = datetime.now().strftime('%Y-%m-%d')
+output_file = rf'/Users/Gorin/Downloads/Сводная_таблица_{current_date}.xlsx'  # Итоговый файл с датой
+
+# Ячейки для извлечения данных
+type_cells = ['E5', 'E6', 'E7']  # "Тип обращения"
+postanovshik_cell = 'D31'  # "Постановщик"
+alternative_cell = 'E31'  # Альтернативное значение для ФИО
+
+# Список для хранения данных
+data = []
+file_index = 1  # Индексация файлов
+
+# Функция получения значения из ячейки
+def get_cell_value(df, cell):
+    column_letter = cell[0]
+    row_number = int(cell[1:]) - 1
+    column_index = ord(column_letter.upper()) - ord('A')
+
+    if row_number < df.shape[0] and column_index < df.shape[1]:
+        value = df.iat[row_number, column_index]
+        return str(value).strip() if pd.notna(value) else "пусто"
+    return "пусто"
+
+# Обход всех файлов в папке
+for filename in os.listdir(folder_path):
+    if filename.endswith('.xlsx') and not filename.startswith('~$'):  # Исключаем временные файлы
+        file_path = os.path.join(folder_path, filename)
+        try:
+            # Читаем Excel-файл
+            df = pd.read_excel(file_path, header=None)
+
+            # Получаем дату создания файла
+            file_creation_time = os.path.getctime(file_path)
+            file_date = pd.to_datetime(file_creation_time, unit='s').strftime('%Y-%m-%d %H:%M:%S')
+
+            # Извлекаем ФИО (Постановщик)
+            postanovshik_value = get_cell_value(df, postanovshik_cell)
+            if postanovshik_value == "пусто":
+                postanovshik_value = get_cell_value(df, alternative_cell)
+
+            # Извлекаем типы обращений
+            type_values = [get_cell_value(df, cell) for cell in type_cells]
+            type_values = [value for value in type_values if value != "пусто"]  # Убираем "пусто"
+
+            # Логика создания строк:
+            if type_values and postanovshik_value != "пусто":
+                for type_value in type_values:
+                    data.append([type_value, postanovshik_value, file_index, filename, file_date])
+            elif type_values:
+                for type_value in type_values:
+                    data.append([type_value, "пусто", file_index, filename, file_date])
+            elif postanovshik_value != "пусто":
+                data.append(["пусто", postanovshik_value, file_index, filename, file_date])
+            else:
+                pass  # Пропускаем, если нет данных
+
+        except Exception as e:
+            print(f"Ошибка при обработке файла {filename}: {e}")
+            data.append(['пусто', 'пусто', file_index, filename, "Ошибка при обработке"])
+
+        file_index += 1  # Увеличиваем индекс файла
+
+# Создаем DataFrame
+df_result = pd.DataFrame(data, columns=['Тип обращения', 'Постановщик', 'Номер файла', 'Название файла', 'Дата создания файла'])
+
+# Сохраняем DataFrame в Excel
+df_result.to_excel(output_file, index=False)
+
+# Выводим результат
+print("Сводная таблица сохранена в:", output_file)
+print(df_result)
