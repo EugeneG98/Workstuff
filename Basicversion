@@ -5,102 +5,73 @@ import warnings
 # Скрываем предупреждения
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# Путь к папке с вашими Excel файлами
-folder_path = r'/Users/Gorin/Downloads/Январь'  # Замените на ваш путь
-# Ячейки, которые вы хотите извлечь
-type_cells = ['E5', 'E6', 'E7']  # Ячейки для "Тип обращения"
-postanovshik_cell = 'D31'  # Ячейка для "Постановщик"
-alternative_cell = 'E31'  # Ячейка для альтернативного значения
-# Список для хранения значений
+# Путь к папке с файлами
+folder_path = r'/Users/Gorin/Downloads/Январь'  # Укажи свой путь
+
+# Ячейки для извлечения данных
+type_cells = ['E5', 'E6', 'E7']  # "Тип обращения"
+postanovshik_cell = 'D31'  # "Постановщик"
+alternative_cell = 'E31'  # Альтернативное значение для ФИО
+
+# Список для хранения данных
 data = []
+file_index = 1  # Индексация файлов
 
-# Индекс для файлов
-file_index = 1
+# Функция получения значения из ячейки
+def get_cell_value(df, cell):
+    column_letter = cell[0]
+    row_number = int(cell[1:]) - 1
+    column_index = ord(column_letter.upper()) - ord('A')
 
-# Проходим по всем файлам в указанной папке
+    if row_number < df.shape[0] and column_index < df.shape[1]:
+        value = df.iat[row_number, column_index]
+        return str(value).strip() if pd.notna(value) else "пусто"
+    return "пусто"
+
+# Обход всех файлов в папке
 for filename in os.listdir(folder_path):
-    if filename.endswith('.xlsx') and not filename.startswith('~$'):  # Игнорируем временные файлы
+    if filename.endswith('.xlsx') and not filename.startswith('~$'):  # Исключаем временные файлы
         file_path = os.path.join(folder_path, filename)
         try:
-            # Читаем файл
+            # Читаем Excel-файл
             df = pd.read_excel(file_path, header=None)
 
-            # Проверяем количество строк в датафрейме
-            max_row_index = df.shape[0] - 1  # Максимальный индекс строки
-            if max_row_index < 0:
-                print(f"Файл {filename} пуст или не содержит строк для обработки.")
+            # Получаем дату создания файла
+            file_creation_time = os.path.getctime(file_path)
+            file_date = pd.to_datetime(file_creation_time, unit='s').strftime('%Y-%m-%d %H:%M:%S')
 
-            # Извлекаем значение для "Постановщик"
-            column_letter = postanovshik_cell[0]
-            row_number = int(postanovshik_cell[1:]) - 1  # Преобразуем строку в индекс (0-индексация)
-            column_index = ord(column_letter.upper()) - ord('A')
-            
-            # Проверяем, существует ли строка в датафрейме
-            if row_number <= max_row_index:
-                postanovshik_value = df.iat[row_number, column_index]  # Получаем значение из D31
-                if pd.notna(postanovshik_value):
-                    postanovshik_value = str(postanovshik_value).strip()
-                else:
-                    postanovshik_value = "пусто"
+            # Извлекаем ФИО (Постановщик)
+            postanovshik_value = get_cell_value(df, postanovshik_cell)
+            if postanovshik_value == "пусто":
+                postanovshik_value = get_cell_value(df, alternative_cell)
+
+            # Извлекаем типы обращений
+            type_values = [get_cell_value(df, cell) for cell in type_cells]
+            type_values = [value for value in type_values if value != "пусто"]  # Убираем "пусто"
+
+            # Логика создания строк:
+            if type_values and postanovshik_value != "пусто":
+                # Есть и тип обращения, и ФИО → создаем строки для каждого типа обращения
+                for type_value in type_values:
+                    data.append([type_value, postanovshik_value, file_index, filename, file_date])
+            elif type_values:
+                # Есть только тип обращения, но нет ФИО
+                for type_value in type_values:
+                    data.append([type_value, "пусто", file_index, filename, file_date])
+            elif postanovshik_value != "пусто":
+                # Есть только ФИО, но нет типов обращения
+                data.append(["пусто", postanovshik_value, file_index, filename, file_date])
             else:
-                postanovshik_value = "пусто"  # Если строки нет, назначаем "пусто"
-
-            # Если значение в D31 пустое, берем значение из E31
-            if not postanovshik_value or postanovshik_value == "пусто":
-                alternative_column_letter = alternative_cell[0]
-                alternative_row_number = int(alternative_cell[1:]) - 1
-                alternative_column_index = ord(alternative_column_letter.upper()) - ord('A')
-                
-                # Проверяем, существует ли строка в датафрейме
-                if alternative_row_number <= max_row_index:
-                    postanovshik_value = df.iat[alternative_row_number, alternative_column_index]  # Получаем значение из E31
-                    if pd.notna(postanovshik_value):
-                        postanovshik_value = str(postanovshik_value).strip()
-                    else:
-                        postanovshik_value = "пусто"
-                else:
-                    postanovshik_value = "пусто"  # Если строки нет, назначаем "пусто"
-
-            # Проверяем значения для "Тип обращения"
-            type_values = []
-            for cell in type_cells:
-                column_letter = cell[0]
-                row_number = int(cell[1:]) - 1  # Преобразуем строку в индекс (0-индексация)
-                column_index = ord(column_letter.upper()) - ord('A')
-                
-                # Проверяем, существует ли строка в датафрейме
-                if row_number <= max_row_index:
-                    type_value = df.iat[row_number, column_index]  # Получаем значение из E5, E6 или E7
-                    if pd.notna(type_value):
-                        type_values.append(str(type_value).strip())
-                    else:
-                        type_values.append("пусто")
-                else:
-                    type_values.append("пусто")
-
-            # Если все значения для "Тип обращения" пустые, ставим "пусто"
-            if not type_values or all(value == "пусто" for value in type_values):
-                type_value_to_add = "пусто"
-            else:
-                # Если хотя бы одно значение есть, то выбираем первое ненулевое
-                type_value_to_add = next((value for value in type_values if value != "пусто"), "пусто")
-
-            # Добавляем в таблицу столько строк, сколько типов обращения в этом файле
-            for _ in type_values:
-                data.append([type_value_to_add, postanovshik_value, file_index])
+                # Ни типа обращения, ни ФИО нет → пропускаем файл
+                pass  
 
         except Exception as e:
-            # Если возникла ошибка, выводим в консоль и записываем "пусто"
             print(f"Ошибка при обработке файла {filename}: {e}")
-            # В случае ошибки, записываем 'пусто' для всех значений
-            data.append(['пусто', 'пусто', file_index])
+            data.append(['пусто', 'пусто', file_index, filename, "Ошибка при обработке"])
 
-        # Увеличиваем индекс для следующего файла
-        file_index += 1
+        file_index += 1  # Увеличиваем индекс файла
 
-# Создаем DataFrame для сводной таблицы, если есть данные
-df_result = pd.DataFrame(data, columns=['Тип обращения', 'Постановщик', 'Номер файла'])
-
-# Выводим результат в консоль
+# Создаем DataFrame и выводим в консоль
+df_result = pd.DataFrame(data, columns=['Тип обращения', 'Постановщик', 'Номер файла', 'Название файла', 'Дата создания'])
 print("Сводная таблица:")
 print(df_result)
